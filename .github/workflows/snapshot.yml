@@ -1,0 +1,39 @@
+name: Homepage Snapshot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 1,4"
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+
+    env:
+      SITE_URL: ${{ secrets.SITE_URL }}
+      SITE_NAME: ${{ secrets.SITE_NAME }}
+      OUTPUT_DIR: output
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run capture
+        run: npm run capture
+
+      - name: Upload artifact (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: output/
