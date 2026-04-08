@@ -33,8 +33,8 @@ async function main() {
   const targetDir = path.join(OUTPUT_DIR, monthFolder, dateFolder);
   fs.mkdirSync(targetDir, { recursive: true });
 
-  const topPath = path.join(targetDir, `${dateFolder}-${safeSiteName}-home-top.png`);
-  const fullPath = path.join(targetDir, `${dateFolder}-${safeSiteName}-home-full.png`);
+  const topPath = path.join(targetDir, `${dateFolder}-${safeSiteName}-home-top.jpg`);
+  const fullPath = path.join(targetDir, `${dateFolder}-${safeSiteName}-home-full.jpg`);
 
   console.log(`Opening: ${SITE_URL}`);
   console.log(`Output folder: ${targetDir}`);
@@ -62,17 +62,17 @@ async function main() {
 
     console.log('Taking top screenshot...');
     await page.screenshot({
-      path: fullPath.replace('.png', '.webp'),
-      fullPage: true,
-      type: 'webp',
+      path: topPath,
+      fullPage: false,
+      type: 'jpg',
       quality: 80
     });
 
     console.log('Taking full screenshot...');
     await page.screenshot({
-      path: fullPath.replace('.png', '.webp'),
+      path: topPath,
       fullPage: true,
-      type: 'webp',
+      type: 'jpg',
       quality: 80
     });
 
