@@ -62,14 +62,18 @@ async function main() {
 
     console.log('Taking top screenshot...');
     await page.screenshot({
-      path: topPath,
-      fullPage: false
+      path: fullPath.replace('.png', '.webp'),
+      fullPage: true,
+      type: 'webp',
+      quality: 80
     });
 
     console.log('Taking full screenshot...');
     await page.screenshot({
-      path: fullPath,
-      fullPage: true
+      path: fullPath.replace('.png', '.webp'),
+      fullPage: true,
+      type: 'webp',
+      quality: 80
     });
 
     console.log(`Saved top screenshot: ${topPath}`);
