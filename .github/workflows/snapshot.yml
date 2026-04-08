@@ -37,3 +37,17 @@ jobs:
         with:
           name: screenshots
           path: output/
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone
+        run: |
+          mkdir -p ~/.config/rclone
+          printf "%s" "${RCLONE_CONF}" > ~/.config/rclone/rclone.conf
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+
+      - name: Upload to Google Drive
+        run: rclone copy output "${RCLONE_REMOTE_PATH}" --create-empty-src-dirs --verbose
+        env:
+          RCLONE_REMOTE_PATH: ${{ secrets.RCLONE_REMOTE_PATH }}
