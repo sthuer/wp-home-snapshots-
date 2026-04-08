@@ -64,15 +64,15 @@ async function main() {
     await page.screenshot({
       path: topPath,
       fullPage: false,
-      type: 'jpg',
+      type: 'jpeg',
       quality: 80
     });
 
     console.log('Taking full screenshot...');
     await page.screenshot({
-      path: topPath,
+      path: fullPath,
       fullPage: true,
-      type: 'jpg',
+      type: 'jpeg',
       quality: 80
     });
 
