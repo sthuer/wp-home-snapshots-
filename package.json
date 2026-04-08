@@ -1,0 +1,13 @@
+{
+  "name": "wp-home-snapshots",
+  "version": "1.0.0",
+  "description": "Automated homepage screenshots for WordPress/Divi sites",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node scripts/capture-home.js"
+  },
+  "dependencies": {
+    "playwright": "^1.54.0"
+  }
+}
