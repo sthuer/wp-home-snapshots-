@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "capture": "node scripts/capture-home.js"
+    "send-monthly-email": "node scripts/send-monthly-email.js"
   },
   "dependencies": {
     "nodemailer": "^6.9.14",
