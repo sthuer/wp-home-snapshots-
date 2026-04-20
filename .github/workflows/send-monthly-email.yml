@@ -32,8 +32,12 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Debug repository files
+        run: |
+          pwd
+          ls -la
+          ls -la scripts
+          cat package.json
 
       - name: Send monthly email
         run: npm run send-monthly-email
