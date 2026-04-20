@@ -1,0 +1,39 @@
+name: Send Monthly Snapshot Email
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 1 * *"
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+
+    env:
+      CLIENT_NAME: ${{ secrets.CLIENT_NAME }}
+      DRIVE_FOLDER_URL: ${{ secrets.DRIVE_FOLDER_URL }}
+      SITE_NAME: ${{ secrets.SITE_NAME }}
+
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_SECURE: ${{ secrets.SMTP_SECURE }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
+      MAIL_TO: ${{ secrets.MAIL_TO_TEST }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Send monthly email
+        run: npm run send-monthly-email
