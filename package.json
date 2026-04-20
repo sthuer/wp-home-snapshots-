@@ -8,6 +8,7 @@
     "capture": "node scripts/capture-home.js"
   },
   "dependencies": {
+    "nodemailer": "^6.9.14",
     "playwright": "^1.54.0"
   }
 }
