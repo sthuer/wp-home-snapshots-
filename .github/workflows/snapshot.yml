@@ -12,6 +12,12 @@ jobs:
     env:
       SITE_URL: ${{ secrets.SITE_URL }}
       SITE_NAME: ${{ secrets.SITE_NAME }}
+      WP_LOGIN_URL: ${{ secrets.WP_LOGIN_URL }}
+      WP_USERNAME: ${{ secrets.WP_USERNAME }}
+      WP_PASSWORD: ${{ secrets.WP_PASSWORD }}
+      EXPECTED_MODAL_SELECTOR: ${{ secrets.EXPECTED_MODAL_SELECTOR }}
+      NON_REGISTERED_MESSAGE_TEXT: ${{ secrets.NON_REGISTERED_MESSAGE_TEXT }}
+      AUTH_STATE_PATH: .auth/storage-state.json
       OUTPUT_DIR: output
 
     steps:
@@ -29,6 +35,14 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
 
+      - name: Restore authenticated session
+        uses: actions/cache@v4
+        with:
+          path: .auth/storage-state.json
+          key: playwright-auth-${{ github.repository_id }}-${{ github.run_id }}
+          restore-keys: |
+            playwright-auth-${{ github.repository_id }}-
+
       - name: Run capture
         run: npm run capture
 
@@ -37,6 +51,15 @@ jobs:
         with:
           name: screenshots
           path: output/
+
+      - name: Upload diagnostic artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-diagnostics
+          path: output/diagnostics/
+          if-no-files-found: ignore
+
       - name: Install rclone
         run: curl https://rclone.org/install.sh | sudo bash
 

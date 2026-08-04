@@ -3,3 +3,5 @@ output/
 playwright-report/
 test-results/
 .env
+.auth/
+**/storage-state.json
