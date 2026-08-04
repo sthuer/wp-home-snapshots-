@@ -119,8 +119,19 @@ async function addPmsmCooldownReset(page) {
       }
 
       const expires = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      document.cookie = `${name}=; ${expires}; path=/`;
-      document.cookie = `${name}=; ${expires}; path=${window.location.pathname}`;
+      const hostParts = window.location.hostname.split('.');
+      const domains = [
+        window.location.hostname,
+        ...hostParts.map((_, index) => `.${hostParts.slice(index).join('.')}`)
+      ];
+      const paths = ['/', window.location.pathname];
+
+      paths.forEach((cookiePath) => {
+        document.cookie = `${name}=; ${expires}; path=${cookiePath}`;
+        domains.forEach((domain) => {
+          document.cookie = `${name}=; ${expires}; path=${cookiePath}; domain=${domain}`;
+        });
+      });
     });
   }, PMSM_STORAGE_TERMS);
 }
@@ -139,6 +150,9 @@ async function pmsmDiagnostics(page) {
       }
       return keys;
     };
+    const matchingCookies = document.cookie.split(';')
+      .map((cookie) => cookie.split('=')[0].trim())
+      .filter((name) => /pmsm|modal|pmpro/i.test(name));
 
     return {
       url: window.location.href,
@@ -149,7 +163,8 @@ async function pmsmDiagnostics(page) {
       opacity: computed ? computed.opacity : null,
       className: modal ? modal.className : null,
       localStorageKeys: matchingKeys(window.localStorage),
-      sessionStorageKeys: matchingKeys(window.sessionStorage)
+      sessionStorageKeys: matchingKeys(window.sessionStorage),
+      cookieKeys: matchingCookies
     };
   });
 }
