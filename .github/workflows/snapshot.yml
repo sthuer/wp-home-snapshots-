@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .auth/storage-state.json
-          key: playwright-auth-${{ github.repository_id }}-${{ github.run_id }}
+          key: playwright-auth-${{ github.repository_id }}-${{ hashFiles('scripts/capture-home.js') }}
           restore-keys: |
             playwright-auth-${{ github.repository_id }}-
 
@@ -47,10 +47,12 @@ jobs:
         run: npm run capture
 
       - name: Upload artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: screenshots
           path: output/
+          if-no-files-found: ignore
 
       - name: Upload diagnostic artifact
         if: failure()
