@@ -8,8 +8,16 @@ const OUTPUT_DIR = process.env.OUTPUT_DIR || 'output';
 const AUTH_STATE_PATH = process.env.AUTH_STATE_PATH || path.join('.auth', 'storage-state.json');
 const AUTH_USERNAME = process.env.WP_USERNAME;
 const AUTH_PASSWORD = process.env.WP_PASSWORD;
-const EXPECTED_MODAL_SELECTOR = process.env.EXPECTED_MODAL_SELECTOR || '[role="dialog"], .modal.show, .modal[aria-hidden="false"], .et_pb_modal, .pum-active';
+const EXPECTED_MODAL_SELECTOR = process.env.EXPECTED_MODAL_SELECTOR || '#pmsm-modal:not([hidden])';
+const EXPECTED_MODAL_DIALOG_SELECTOR = '#pmsm-modal .pmsm-modal__dialog';
 const NON_REGISTERED_MESSAGE_TEXT = process.env.NON_REGISTERED_MESSAGE_TEXT || 'usuario no registrado|usuarios no registrados|no registrado|not registered|not logged in';
+const PMSM_STORAGE_TERMS = [
+  'pmsm',
+  'subscription_modal',
+  'subscription-modal',
+  'pmpro_modal',
+  'pmpro-modal'
+];
 
 if (!SITE_URL) {
   console.error('Missing SITE_URL environment variable.');
@@ -78,6 +86,83 @@ async function hasVisibleSelector(page, selector) {
   return false;
 }
 
+async function addPmsmCooldownReset(page) {
+  await page.addInitScript((terms) => {
+    const matchesPmsmTerm = (name) => {
+      const normalized = String(name || '').toLowerCase();
+      return terms.some((term) => normalized.includes(term));
+    };
+
+    const removeMatchingStorageKeys = (storage) => {
+      if (!storage) {
+        return;
+      }
+
+      const keys = [];
+      for (let index = 0; index < storage.length; index += 1) {
+        const key = storage.key(index);
+        if (matchesPmsmTerm(key)) {
+          keys.push(key);
+        }
+      }
+
+      keys.forEach((key) => storage.removeItem(key));
+    };
+
+    removeMatchingStorageKeys(window.localStorage);
+    removeMatchingStorageKeys(window.sessionStorage);
+
+    document.cookie.split(';').forEach((cookie) => {
+      const name = cookie.split('=')[0].trim();
+      if (!matchesPmsmTerm(name)) {
+        return;
+      }
+
+      const expires = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = `${name}=; ${expires}; path=/`;
+      document.cookie = `${name}=; ${expires}; path=${window.location.pathname}`;
+    });
+  }, PMSM_STORAGE_TERMS);
+}
+
+async function pmsmDiagnostics(page) {
+  return await page.evaluate(() => {
+    const modal = document.querySelector('#pmsm-modal');
+    const computed = modal ? window.getComputedStyle(modal) : null;
+    const matchingKeys = (storage) => {
+      const keys = [];
+      for (let index = 0; index < storage.length; index += 1) {
+        const key = storage.key(index);
+        if (/pmsm|modal|pmpro/i.test(key)) {
+          keys.push(key);
+        }
+      }
+      return keys;
+    };
+
+    return {
+      url: window.location.href,
+      modalExists: Boolean(modal),
+      hidden: modal ? modal.getAttribute('hidden') : null,
+      display: computed ? computed.display : null,
+      visibility: computed ? computed.visibility : null,
+      opacity: computed ? computed.opacity : null,
+      className: modal ? modal.className : null,
+      localStorageKeys: matchingKeys(window.localStorage),
+      sessionStorageKeys: matchingKeys(window.sessionStorage)
+    };
+  });
+}
+
+async function logPmsmDiagnostics(page) {
+  const diagnostics = await pmsmDiagnostics(page).catch((error) => ({
+    error: `${error.name}: ${error.message}`
+  }));
+
+  console.error('PMSM modal diagnostics:');
+  console.error(JSON.stringify(diagnostics, null, 2));
+}
+
 async function validateAuthenticatedCapture(page) {
   if (isLoginUrl(page.url())) {
     throw new Error(`Authentication validation failed: redirected to login (${page.url()}).`);
@@ -87,14 +172,21 @@ async function validateAuthenticatedCapture(page) {
     throw new Error('Authentication validation failed: non-registered user message is visible.');
   }
 
-  if (!await hasVisibleSelector(page, EXPECTED_MODAL_SELECTOR)) {
+  if (!await page.locator(EXPECTED_MODAL_SELECTOR).first().waitFor({ state: 'visible', timeout: 30000 }).then(() => true).catch(() => false)) {
+    await logPmsmDiagnostics(page);
     throw new Error(`Capture validation failed: expected modal is not visible (${EXPECTED_MODAL_SELECTOR}).`);
+  }
+
+  if (!await hasVisibleSelector(page, EXPECTED_MODAL_DIALOG_SELECTOR)) {
+    await logPmsmDiagnostics(page);
+    throw new Error(`Capture validation failed: expected modal dialog is not visible (${EXPECTED_MODAL_DIALOG_SELECTOR}).`);
   }
 }
 
 async function openTargetPage(context) {
   const page = await context.newPage();
   page.setDefaultTimeout(30000);
+  await addPmsmCooldownReset(page);
 
   await page.goto(SITE_URL, {
     waitUntil: 'domcontentloaded',
@@ -133,6 +225,8 @@ async function login(browser) {
       page.waitForLoadState('domcontentloaded').catch(() => {}),
       page.locator('#wp-submit, input[type="submit"], button[type="submit"]').first().click()
     ]);
+
+    await addPmsmCooldownReset(page);
 
     await page.goto(SITE_URL, {
       waitUntil: 'domcontentloaded',
@@ -248,7 +342,10 @@ async function main() {
     console.log(`Saved full screenshot: ${fullPath}`);
   } catch (error) {
     console.error('Capture failed:');
-    console.error(error);
+    console.error(`${error.name}: ${error.message}`);
+    if (error.stack) {
+      console.error(error.stack);
+    }
     failedContext = error.context;
     const diagnosticPath = await saveDiagnosticScreenshot(page || error.page, targetDir, dateFolder, safeSiteName);
     if (diagnosticPath) {
