@@ -22,7 +22,8 @@ Automated screenshots of the homepage for archival/reference purposes.
 
 ## Optional GitHub Secrets
 - WP_LOGIN_URL: custom login URL. Defaults to `/wp-login.php` on `SITE_URL`.
-- EXPECTED_MODAL_SELECTOR: CSS selector for the modal that must be visible before screenshots. Defaults to common dialog/modal selectors.
+- BLOCKING_MODAL_SELECTOR: CSS selector for the subscription modal that must not be visible before screenshots. Defaults to `#pmsm-modal:not([hidden])`.
+- EXPECTED_MODAL_SELECTOR: deprecated alias for `BLOCKING_MODAL_SELECTOR`, kept for existing GitHub secrets.
 - NON_REGISTERED_MESSAGE_TEXT: text or regex used to detect the non-registered-user message. Defaults to common Spanish/English variants.
 
 The workflow stores Playwright `storageState` in the GitHub Actions cache and regenerates it with `WP_USERNAME` and `WP_PASSWORD` when the session expires. Authentication files, cookies and local env files are ignored by Git.

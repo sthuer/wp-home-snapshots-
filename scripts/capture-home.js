@@ -8,7 +8,7 @@ const OUTPUT_DIR = process.env.OUTPUT_DIR || 'output';
 const AUTH_STATE_PATH = process.env.AUTH_STATE_PATH || path.join('.auth', 'storage-state.json');
 const AUTH_USERNAME = process.env.WP_USERNAME;
 const AUTH_PASSWORD = process.env.WP_PASSWORD;
-const EXPECTED_MODAL_SELECTOR = process.env.EXPECTED_MODAL_SELECTOR || '#pmsm-modal:not([hidden])';
+const BLOCKING_MODAL_SELECTOR = process.env.BLOCKING_MODAL_SELECTOR || process.env.EXPECTED_MODAL_SELECTOR || '#pmsm-modal:not([hidden])';
 const NON_REGISTERED_MESSAGE_TEXT = process.env.NON_REGISTERED_MESSAGE_TEXT || 'usuario no registrado|usuarios no registrados|no registrado|not registered|not logged in';
 const PMSM_STORAGE_TERMS = [
   'pmsm',
@@ -186,9 +186,9 @@ async function validateAuthenticatedCapture(page) {
     throw new Error('Authentication validation failed: non-registered user message is visible.');
   }
 
-  if (await hasVisibleSelector(page, EXPECTED_MODAL_SELECTOR)) {
+  if (await hasVisibleSelector(page, BLOCKING_MODAL_SELECTOR)) {
     await logPmsmDiagnostics(page);
-    throw new Error(`Capture validation failed: subscription modal is visible (${EXPECTED_MODAL_SELECTOR}).`);
+    throw new Error(`Capture validation failed: subscription modal is visible (${BLOCKING_MODAL_SELECTOR}).`);
   }
 }
 

@@ -15,6 +15,7 @@ jobs:
       WP_LOGIN_URL: ${{ secrets.WP_LOGIN_URL }}
       WP_USERNAME: ${{ secrets.WP_USERNAME }}
       WP_PASSWORD: ${{ secrets.WP_PASSWORD }}
+      BLOCKING_MODAL_SELECTOR: ${{ secrets.BLOCKING_MODAL_SELECTOR }}
       EXPECTED_MODAL_SELECTOR: ${{ secrets.EXPECTED_MODAL_SELECTOR }}
       NON_REGISTERED_MESSAGE_TEXT: ${{ secrets.NON_REGISTERED_MESSAGE_TEXT }}
       AUTH_STATE_PATH: .auth/storage-state.json
