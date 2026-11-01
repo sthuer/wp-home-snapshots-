@@ -7,7 +7,7 @@ on:
 
 jobs:
   capture:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     env:
       SITE_URL: ${{ secrets.SITE_URL }}
