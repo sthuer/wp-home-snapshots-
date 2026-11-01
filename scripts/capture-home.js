@@ -309,6 +309,46 @@ async function saveDiagnosticScreenshot(page, targetDir, dateFolder, safeSiteNam
   }
 }
 
+async function prepareFullPage(page) {
+  // Visit the existing page only: trigger lazy content without clicking links.
+  await page.evaluate(async () => {
+    const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const height = () => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+    let stable = 0;
+    let previousHeight = 0;
+    for (let step = 0; step < 80; step += 1) {
+      window.scrollBy(0, Math.max(500, Math.floor(window.innerHeight * 0.8)));
+      await pause(200);
+      const currentHeight = height();
+      const atBottom = window.scrollY + window.innerHeight >= currentHeight - 2;
+      stable = atBottom && currentHeight === previousHeight ? stable + 1 : 0;
+      previousHeight = currentHeight;
+      if (stable >= 3) break;
+      if (step === 79) throw new Error('Page did not reach a stable bottom for capture.');
+    }
+    await document.fonts.ready;
+    await Promise.all([...document.images].filter((image) => !image.complete).map((image) =>
+      new Promise((resolve) => {
+        const timer = setTimeout(resolve, 5000);
+        const done = () => { clearTimeout(timer); resolve(); };
+        image.addEventListener('load', done, { once: true });
+        image.addEventListener('error', done, { once: true });
+      })
+    ));
+    window.scrollTo(0, 0);
+  });
+  let previousHeight = 0;
+  let stable = 0;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const height = await page.evaluate(() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight));
+    stable = height === previousHeight ? stable + 1 : 0;
+    if (stable >= 3) return height;
+    previousHeight = height;
+    await page.waitForTimeout(200);
+  }
+  throw new Error('Page height did not stabilize before capture.');
+}
+
 async function main() {
   const { dateFolder, monthFolder } = getDateParts();
   const safeSiteName = sanitizeName(SITE_NAME);
@@ -331,21 +371,32 @@ async function main() {
     ({ context, page } = await authenticatedPage(browser));
     await validateAuthenticatedCapture(page);
 
+    await prepareFullPage(page);
+
     console.log('Taking top screenshot...');
     await page.screenshot({
       path: topPath,
       fullPage: false,
+      animations: 'disabled',
       type: 'jpeg',
       quality: 80
     });
 
     console.log('Taking full screenshot...');
-    await page.screenshot({
-      path: fullPath,
-      fullPage: true,
-      type: 'jpeg',
-      quality: 80
-    });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const before = await prepareFullPage(page);
+      await page.screenshot({
+        path: fullPath,
+        fullPage: true,
+        animations: 'disabled',
+        type: 'jpeg',
+        quality: 80
+      });
+      const after = await page.evaluate(() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight));
+      console.log(`Full capture height: before=${before}, after=${after}`);
+      if (before === after) break;
+      if (attempt === 1) throw new Error('Page height changed during full capture.');
+    }
 
     console.log(`Saved top screenshot: ${topPath}`);
     console.log(`Saved full screenshot: ${fullPath}`);
