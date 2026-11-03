@@ -383,8 +383,17 @@ async function main() {
     });
 
     console.log('Taking full screenshot...');
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    const maxFullAttempts = 4;
+    const heightTolerancePx = 20;
+    let fullCaptured = false;
+    for (let attempt = 0; attempt < maxFullAttempts; attempt += 1) {
       const before = await prepareFullPage(page);
+      await page.waitForTimeout(1000);
+      const settled = await page.evaluate(() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight));
+      if (settled !== before) {
+        console.log(`Full capture height still settling: before=${before}, settled=${settled}`);
+        continue;
+      }
       await page.screenshot({
         path: fullPath,
         fullPage: true,
@@ -393,9 +402,21 @@ async function main() {
         quality: 80
       });
       const after = await page.evaluate(() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight));
+      const delta = Math.abs(after - before);
       console.log(`Full capture height: before=${before}, after=${after}`);
-      if (before === after) break;
-      if (attempt === 1) throw new Error('Page height changed during full capture.');
+      if (delta <= heightTolerancePx) {
+        if (delta > 0) {
+          console.log(`Accepting full capture with minor height delta=${delta}px (<= ${heightTolerancePx}px).`);
+        }
+        fullCaptured = true;
+        break;
+      }
+      if (attempt === maxFullAttempts - 1) {
+        throw new Error(`Page height changed during full capture (delta=${delta}).`);
+      }
+    }
+    if (!fullCaptured) {
+      throw new Error('Page height did not settle for full capture.');
     }
 
     console.log(`Saved top screenshot: ${topPath}`);
@@ -423,3 +444,4 @@ async function main() {
 }
 
 main();
+
